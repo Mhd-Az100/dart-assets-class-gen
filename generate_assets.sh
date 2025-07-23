@@ -3,9 +3,9 @@
 # Purpose: Generate a Dart class for assets to provide type-safe access.
 #
 # This script scans the ASSETS_DIR, ignores the 'fonts' subdirectory,
-# and creates a Dart file at OUTPUT_FILE. It organizes assets by their
-# parent folder (e.g., images, icons) and then groups them by file
-# extension in a predefined order.
+# and creates a Dart file at OUTPUT_FILE. It handles filenames with spaces,
+# hyphens, and capital letters, converting them into valid lowerCamelCase
+# Dart variable names.
 
 # --- Configuration ---
 ASSETS_DIR="assets"
@@ -28,8 +28,7 @@ echo "🚀 Starting asset generation..."
   echo ""
 } > "$OUTPUT_FILE"
 
-# Find top-level directories in the assets folder (e.g., assets/images, assets/icons)
-# and sort them alphabetically.
+# Find top-level directories in the assets folder
 for dir in $(find "$ASSETS_DIR" -maxdepth 1 -mindepth 1 -type d | sort); do
     folder_name=$(basename "$dir")
 
@@ -39,20 +38,17 @@ for dir in $(find "$ASSETS_DIR" -maxdepth 1 -mindepth 1 -type d | sort); do
     fi
 
     # --- Rule: Add section comments like // === Images === ---
-    # Capitalize the first letter of the folder name for the comment
     section_name_capitalized="$(tr '[:lower:]' '[:upper:]' <<< ${folder_name:0:1})${folder_name:1}"
     echo "  // === $section_name_capitalized ===" >> "$OUTPUT_FILE"
 
     # --- Rule: Order assets by extension ---
-    # Define the desired order of file extensions. Files with other extensions will be ignored.
     extensions=("svg" "png" "jpg" "jpeg" "gif" "webp" "json" "riv")
 
     first_entry_in_section=true
     for ext in "${extensions[@]}"; do
-        # Find all files with the current extension in the directory and its subdirectories
-        found_files=$(find "$dir" -type f -name "*.$ext" | sort)
-
-        if [[ -z "$found_files" ]]; then
+        # Find all files with the current extension, but don't process yet
+        files_found=$(find "$dir" -type f -name "*.$ext")
+        if [[ -z "$files_found" ]]; then
             continue
         fi
 
@@ -63,15 +59,24 @@ for dir in $(find "$ASSETS_DIR" -maxdepth 1 -mindepth 1 -type d | sort); do
         echo "  // .$ext" >> "$OUTPUT_FILE"
         first_entry_in_section=false
 
-        for file in $found_files; do
+        # Use a while read loop to correctly handle filenames with spaces and special chars
+        echo "$files_found" | sort | while IFS= read -r file; do
             # --- Generate a clean, camelCase variable name from the file path ---
-            # 'assets/images/onboarding/welcome_screen.png'
-            # 1. Remove base dir and extension: 'images/onboarding/welcome_screen'
-            var_name=$(echo "$file" | sed -e "s#^$ASSETS_DIR/##" -e "s#\.$ext##")
-            # 2. Replace slashes, dashes, and spaces with underscores: 'images_onboarding_welcome_screen'
-            var_name=$(echo "$var_name" | tr '/' '_' | tr '-' '_' | tr ' ' '_')
-            # 3. Convert to lowerCamelCase: 'imagesOnboardingWelcomeScreen'
-            var_name_camel=$(echo "$var_name" | awk -F_ '{printf "%s", $1; for(i=2; i<=NF; i++) printf "%s", toupper(substr($i,1,1)) substr($i,2)}')
+            # e.g., 'assets/images/Onboarding/Welcome - Screen 1.png'
+            
+            # 1. Get path relative to assets dir, without extension
+            var_name_base=$(echo "$file" | sed -e "s#^$ASSETS_DIR/##" -e "s#\.$ext##")
+
+            # 2. Convert to lowercase and replace all invalid chars (/, -, space) with an underscore
+            var_name_snake=$(echo "$var_name_base" | tr '[:upper:]' '[:lower:]' | sed -e 's#[/ -]\+/_#g' -e 's/^_//' -e 's/_$//')
+            
+            # 3. Convert snake_case to lowerCamelCase
+            var_name_camel=$(echo "$var_name_snake" | awk -F_ '{printf "%s", $1; for(i=2; i<=NF; i++) printf "%s", toupper(substr($i,1,1)) substr($i,2)}')
+            
+            # 4. If the name starts with a number, prefix it to make it a valid variable name
+            if [[ $var_name_camel =~ ^[0-9] ]]; then
+                var_name_camel="asset$var_name_camel"
+            fi
 
             # Write the static constant to the file
             echo "  static const String $var_name_camel = '$file';" >> "$OUTPUT_FILE"
