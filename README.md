@@ -18,33 +18,23 @@ This script helps you write cleaner, more maintainable code by eliminating the r
 
 ## ⚙️ Installation
 
-You can add the asset generator to your project with a single command. Open your terminal in the **root directory of your Flutter project** and run:
+Install the script as a global command with a single line in your terminal. This will allow you to run it from any directory.
 
 ```sh
-# IMPORTANT: Replace YourUsername/YourRepo with your actual GitHub username and repository name.
-sh -c "$(curl -fsSL [https://raw.githubusercontent.com/YourUsername/YourRepo/main/install.sh](https://raw.githubusercontent.com/YourUsername/YourRepo/main/install.sh))"
+sh -c "$(curl -fsSL [https://raw.githubusercontent.com/Mhd-Az100/dart-assets-class-gen/main/install.sh](https://raw.githubusercontent.com/Mhd-Az100/dart-assets-class-gen/main/install.sh))"
 ```
-
-This command will:
-1.  Create a `scripts/` directory in your project.
-2.  Download the `generate_assets.sh` script into it.
-3.  Make the script executable.
-
-It's highly recommended to commit the `scripts` folder to your version control system so your entire team can use it.
+After installation, you may need to **restart your terminal** or run `source ~/.bashrc` (or `~/.zshrc`) for the new command to be available.
 
 ---
-
 ## 🏃‍♀️ Usage
 
-1.  **Add assets** to your `assets` folder as you normally would (e.g., `assets/images/logo.png`).
-2.  **Declare them** in your `pubspec.yaml` file to make them available to your app.
-3.  **Run the script** from your project's root directory:
+Once installed, you can generate your assets class from the root of **any** Flutter project with a simple command:
 
-    ```sh
-    ./scripts/generate_assets.sh
-    ```
+```sh
+generate-flutter-assets
+```
 
-The script will generate (or overwrite) the file at `lib/constants/app_assets.dart` with your new asset constants.
+The script will automatically find your `assets` folder and generate the `app_assets.dart` file inside `lib/constants/`.
 
 ### In Your Dart Code
 
