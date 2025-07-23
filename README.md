@@ -21,7 +21,7 @@ This script helps you write cleaner, more maintainable code by eliminating the r
 Install the script as a global command with a single line in your terminal. This will allow you to run it from any directory.
 
 ```sh
-sh -c "$(curl -fsSL [https://raw.githubusercontent.com/Mhd-Az100/dart-assets-class-gen/main/install.sh](https://raw.githubusercontent.com/Mhd-Az100/dart-assets-class-gen/main/install.sh))"
+sh -c "$(curl -fsSL https://raw.githubusercontent.com/Mhd-Az100/dart-assets-class-gen/main/install.sh)"
 ```
 After installation, you may need to **restart your terminal** or run `source ~/.bashrc` (or `~/.zshrc`) for the new command to be available.
 
