@@ -1,16 +1,16 @@
 #!/bin/bash
 
 # Flutter Asset Generator Installer
-# Installs the asset generator script locally into a Flutter project.
-# Version: 1.1.0
+# Installs the asset generator script globally for the current user.
+# Version: 2.0.0
 
 set -e
 
 # --- Configuration ---
+SCRIPT_NAME="generate-flutter-assets"
+INSTALL_DIR="$HOME/.local/bin"
 SCRIPT_URL="https://raw.githubusercontent.com/Mhd-Az100/dart-assets-class-gen/refs/heads/main/generate_assets.sh"
-SCRIPT_DIR="scripts"
-SCRIPT_NAME="generate_assets.sh"
-TARGET_PATH="$SCRIPT_DIR/$SCRIPT_NAME"
+UNINSTALLER_NAME="uninstall-flutter-assets"
 
 # --- Colors for Output ---
 RED='\033[0;31m'
@@ -33,9 +33,9 @@ print_banner() {
     echo -e "${CYAN}"
     echo "╔════════════════════════════════════════════════════════╗"
     echo "║                                                        ║"
-    echo "║          Flutter Asset Generator Installer             ║"
+    echo "║       Global Flutter Asset Generator Installer         ║"
     echo "║                                                        ║"
-    echo "║   ✨ Create type-safe asset constants automatically    ║"
+    echo "║   ✨ Create type-safe asset constants from anywhere    ║"
     echo "║                                                        ║"
     echo "╚════════════════════════════════════════════════════════╝"
     echo -e "${NC}"
@@ -56,47 +56,80 @@ check_requirements() {
 }
 
 # --- Core Functions ---
+create_install_dir() {
+    log_step "Ensuring installation directory exists..."
+    if [ ! -d "$INSTALL_DIR" ]; then
+        mkdir -p "$INSTALL_DIR"
+        log_info "Created directory: $INSTALL_DIR"
+    else
+        log_info "Directory already exists: $INSTALL_DIR"
+    fi
+}
+
 install_script() {
     log_step "Installing Asset Generator script..."
+    local target_path="$INSTALL_DIR/$SCRIPT_NAME"
     
-    if [ ! -d "$SCRIPT_DIR" ]; then
-        mkdir -p "$SCRIPT_DIR"
-        log_info "Created directory: $SCRIPT_DIR"
-    fi
-
     log_info "Downloading script from GitHub..."
     if command_exists curl; then
-        if ! curl -fsSL "$SCRIPT_URL" -o "$TARGET_PATH"; then
+        if ! curl -fsSL "$SCRIPT_URL" -o "$target_path"; then
             log_error "Download failed using curl. Please check the URL and your connection."
             exit 1
         fi
-    elif command_exists wget; then
-        if ! wget -q "$SCRIPT_URL" -O "$TARGET_PATH"; then
+    else
+        if ! wget -q "$SCRIPT_URL" -O "$target_path"; then
             log_error "Download failed using wget. Please check the URL and your connection."
             exit 1
         fi
     fi
 
-    chmod +x "$TARGET_PATH"
-    log_success "Script installed successfully to: $TARGET_PATH"
+    chmod +x "$target_path"
+    log_success "Script installed successfully to: $target_path"
 }
 
-uninstall_script() {
-    echo ""
-    log_warning "This will remove the 'scripts' directory and all its contents."
-    read -p "Are you sure you want to uninstall? (y/N): " -n 1 -r
-    echo ""
-
-    if [[ $REPLY =~ ^[Yy]$ ]]; then
-        if [ -d "$SCRIPT_DIR" ]; then
-            rm -rf "$SCRIPT_DIR"
-            log_success "Flutter Asset Generator has been uninstalled."
-        else
-            log_info "Directory '$SCRIPT_DIR' not found. Nothing to uninstall."
-        fi
-    else
-        log_info "Uninstallation cancelled."
+update_path() {
+    log_step "Checking system PATH..."
+    if [[ ":$PATH:" == *":$INSTALL_DIR:"* ]]; then
+        log_info "Installation directory is already in your PATH."
+        return
     fi
+    
+    log_warning "Installation directory not found in PATH. Attempting to update shell configuration."
+    local shell_config=""
+    if [ -n "$BASH_VERSION" ]; then
+        shell_config="$HOME/.bashrc"
+    elif [ -n "$ZSH_VERSION" ]; then
+        shell_config="$HOME/.zshrc"
+    else
+        shell_config="$HOME/.profile"
+    fi
+
+    if [ -f "$shell_config" ]; then
+        echo "" >> "$shell_config"
+        echo "# Added by Flutter Asset Generator Installer" >> "$shell_config"
+        echo "export PATH=\"\$PATH:$INSTALL_DIR\"" >> "$shell_config"
+        log_success "Added PATH to $shell_config."
+        log_warning "Please restart your terminal or run 'source $shell_config' to apply changes."
+    else
+        log_error "Could not find a shell config file. Please add '$INSTALL_DIR' to your PATH manually."
+    fi
+}
+
+create_uninstaller() {
+    log_step "Creating uninstaller..."
+    local uninstaller_path="$INSTALL_DIR/$UNINSTALLER_NAME"
+    
+    cat > "$uninstaller_path" << EOF
+#!/bin/bash
+echo "🗑️  Uninstalling Flutter Asset Generator..."
+rm -f "$INSTALL_DIR/$SCRIPT_NAME"
+rm -f "$uninstaller_path"
+echo "✅ Uninstalled successfully."
+echo "ℹ️  You may need to manually remove the PATH entry from your shell configuration file (e.g., ~/.bashrc or ~/.zshrc)."
+EOF
+
+    chmod +x "$uninstaller_path"
+    log_success "Uninstaller created. Run '$UNINSTALLER_NAME' to remove."
 }
 
 print_summary() {
@@ -105,14 +138,13 @@ print_summary() {
     echo -e "${GREEN}╚════════════════════════════════════════════════════════╝${NC}"
     echo ""
     echo -e "${CYAN}🚀 HOW TO USE:${NC}"
-    echo "   1. Add your assets to your project (e.g., 'assets/images/')."
-    echo "   2. Declare them in 'pubspec.yaml'."
-    echo "   3. Run the generator from your project root:"
-    echo -e "      ${YELLOW}./$TARGET_PATH${NC}"
+    echo "   1. Navigate to any Flutter project root directory."
+    echo "   2. Run the global command:"
+    echo -e "      ${YELLOW}$SCRIPT_NAME${NC}"
     echo ""
     echo -e "${CYAN}📦 UNINSTALL:${NC}"
     echo "   To remove the script, run:"
-    echo -e "      ${YELLOW}./install.sh --uninstall${NC}"
+    echo -e "      ${YELLOW}$UNINSTALLER_NAME${NC}"
     echo ""
     echo -e "${GREEN}Happy coding! ✨${NC}"
 }
@@ -121,7 +153,7 @@ print_summary() {
 main() {
     print_banner
     
-    if [ -f "$TARGET_PATH" ]; then
+    if [ -f "$INSTALL_DIR/$SCRIPT_NAME" ]; then
         log_warning "Asset Generator is already installed."
         read -p "Do you want to reinstall? (y/N): " -n 1 -r
         echo ""
@@ -132,7 +164,10 @@ main() {
     fi
     
     check_requirements
+    create_install_dir
     install_script
+    update_path
+    create_uninstaller
     print_summary
 }
 
@@ -143,12 +178,17 @@ case "${1:-}" in
         echo "Usage: ./install.sh [COMMAND]"
         echo ""
         echo "Commands:"
-        echo "  (no command)      Run the interactive installer."
-        echo "  --uninstall       Remove the generator script and 'scripts' directory."
+        echo "  (no command)      Run the interactive global installer."
+        echo "  --uninstall       Remove the globally installed tool."
         echo "  --help, -h        Show this help message."
         ;;
     --uninstall)
-        uninstall_script
+        if [ -f "$INSTALL_DIR/$UNINSTALLER_NAME" ]; then
+             exec "$INSTALL_DIR/$UNINSTALLER_NAME"
+        else
+            log_error "Uninstaller not found. The tool may not be installed."
+            exit 1
+        fi
         ;;
     *)
         main
