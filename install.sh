@@ -2,7 +2,7 @@
 
 # Flutter Asset Generator Installer
 # Installs the asset generator script globally for the current user.
-# Version: 2.0.0
+# Version: 2.1.0
 
 set -e
 
@@ -87,31 +87,38 @@ install_script() {
     log_success "Script installed successfully to: $target_path"
 }
 
+# --- NEW: Robust update_path function ---
 update_path() {
-    log_step "Checking system PATH..."
+    log_step "Updating PATH..."
+    
+    # Check if directory is already in the live PATH variable
     if [[ ":$PATH:" == *":$INSTALL_DIR:"* ]]; then
-        log_info "Installation directory is already in your PATH."
+        log_info "Directory already in your active PATH: $INSTALL_DIR"
         return
     fi
     
-    log_warning "Installation directory not found in PATH. Attempting to update shell configuration."
-    local shell_config=""
-    if [ -n "$BASH_VERSION" ]; then
-        shell_config="$HOME/.bashrc"
-    elif [ -n "$ZSH_VERSION" ]; then
-        shell_config="$HOME/.zshrc"
-    else
-        shell_config="$HOME/.profile"
-    fi
-
-    if [ -f "$shell_config" ]; then
-        echo "" >> "$shell_config"
-        echo "# Added by Flutter Asset Generator Installer" >> "$shell_config"
-        echo "export PATH=\"\$PATH:$INSTALL_DIR\"" >> "$shell_config"
-        log_success "Added PATH to $shell_config."
-        log_warning "Please restart your terminal or run 'source $shell_config' to apply changes."
-    else
-        log_error "Could not find a shell config file. Please add '$INSTALL_DIR' to your PATH manually."
+    # Define shell configuration files to check
+    local shell_configs=("$HOME/.bashrc" "$HOME/.zshrc" "$HOME/.profile")
+    local path_export="export PATH=\"\$PATH:$INSTALL_DIR\""
+    local updated=false
+    
+    for config in "${shell_configs[@]}"; do
+        if [ -f "$config" ]; then
+            # Check if the path is already in the file to avoid duplicates
+            if ! grep -qF "$path_export" "$config"; then
+                echo "" >> "$config"
+                echo "# Added by Flutter Asset Generator Installer" >> "$config"
+                echo "$path_export" >> "$config"
+                log_success "Updated $config"
+                updated=true
+            else
+                log_info "Path entry already exists in $config"
+            fi
+        fi
+    done
+    
+    if [ "$updated" = true ]; then
+        log_warning "Please restart your terminal or run 'source ~/.bashrc' (or ~/.zshrc) to apply changes."
     fi
 }
 
