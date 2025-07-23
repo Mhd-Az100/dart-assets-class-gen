@@ -7,8 +7,7 @@
 set -e
 
 # --- Configuration ---
-# IMPORTANT: Replace this URL with the raw link to your 'generate_assets.sh' file.
-SCRIPT_URL="https://raw.githubusercontent.com/YourUsername/YourRepo/main/generate_assets.sh"
+SCRIPT_URL="https://raw.githubusercontent.com/Mhd-Az100/dart-assets-class-gen/refs/heads/main/generate_assets.sh"
 SCRIPT_DIR="scripts"
 SCRIPT_NAME="generate_assets.sh"
 TARGET_PATH="$SCRIPT_DIR/$SCRIPT_NAME"
